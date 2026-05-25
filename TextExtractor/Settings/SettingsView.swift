@@ -4,7 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage(PreferenceKeys.playSuccessSound) private var playSuccessSound = true
     @AppStorage(PreferenceKeys.preserveLineBreaks) private var preserveLineBreaks = true
-    @AppStorage(PreferenceKeys.recognitionLanguages) private var recognitionLanguages = "en-US"
+    @AppStorage(PreferenceKeys.recognitionLanguages) private var recognitionLanguages = "en-US, ar"
     @AppStorage(PreferenceKeys.customWords) private var customWords = ""
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
 
