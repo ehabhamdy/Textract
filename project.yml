@@ -1,0 +1,32 @@
+name: TextExtractor
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.example.TextExtractor
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_STYLE: Automatic
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 2.4.0
+targets:
+  TextExtractor:
+    type: application
+    platform: macOS
+    sources:
+      - TextExtractor
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: TextExtractor/Support/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TextExtractor/Support/TextExtractor.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        PRODUCT_NAME: TextExtractor
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - package: KeyboardShortcuts
