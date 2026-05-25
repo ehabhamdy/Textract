@@ -14,6 +14,7 @@ TextExtractor is a native macOS menu-bar app that captures a user-selected scree
 - `project.yml`: XcodeGen specification for the app project
 - `TextExtractor.xcodeproj`: generated Xcode project
 - `TextExtractor/`: app source code
+- `scripts/build_app.sh`: release-oriented helper that generates and builds a runnable `.app`
 
 ## Install Tooling
 
@@ -83,6 +84,60 @@ You can build the app without opening Xcode:
 xcodebuild -project TextExtractor.xcodeproj -scheme TextExtractor -configuration Debug build
 ```
 
+## Create a Runnable `.app`
+
+The simplest way to create a local app bundle is to use the included build script:
+
+```bash
+./scripts/build_app.sh
+```
+
+That script:
+
+1. Regenerates the Xcode project from `project.yml`
+2. Builds the app in `Release` configuration
+3. Copies the finished app bundle to `dist/TextExtractor.app`
+
+Open the generated app bundle with:
+
+```bash
+open dist/TextExtractor.app
+```
+
+If you want to move it into Applications:
+
+```bash
+cp -R dist/TextExtractor.app /Applications/
+```
+
+You can also build the `.app` manually without the helper script:
+
+```bash
+xcodegen generate
+xcodebuild \
+    -project TextExtractor.xcodeproj \
+    -scheme TextExtractor \
+    -configuration Release \
+    -derivedDataPath build/derived-data \
+    build
+```
+
+The resulting app bundle will be at:
+
+```bash
+build/derived-data/Build/Products/Release/TextExtractor.app
+```
+
+## Production Prep
+
+Before distributing the app outside your machine:
+
+1. Review the bundle identifier in `project.yml` and adjust it if you need a different production identifier. It is currently set to `com.ehapps.TextExtractor`.
+2. Configure your Apple Developer team and signing settings in Xcode.
+3. Build a `Release` app bundle instead of using the default `Debug` build.
+4. Verify the first-run experience on a clean machine, including screen capture permission prompts, shortcut setup, and launch-at-login behavior.
+5. If you plan to share the app, archive, sign, notarize, and staple the build before distribution.
+
 ## Project Structure
 
 ```
@@ -92,7 +147,7 @@ TextExtractor/
 │   ├── AppDelegate.swift             # App lifecycle
 │   └── AppController.swift           # Capture → OCR → clipboard pipeline + hotkey
 ├── MenuBar/
-│   └── StatusItemController.swift    # Menu-bar item and menu
+│   └── MenuBarContentView.swift      # SwiftUI MenuBarExtra content and native SettingsLink
 ├── Capture/
 │   └── ScreenCaptureService.swift    # screencapture -i wrapper, cancellation handling
 ├── OCR/
@@ -117,6 +172,7 @@ TextExtractor/
 - The global shortcut has no default value. You must assign one in Settings before using the hotkey path.
 - `Launch at login` is wired through `SMAppService`. Test that feature in a normal signed app environment, not just a transient debug run.
 - The app uses `/usr/sbin/screencapture` for the interactive selection flow.
+- The bundle identifier is currently set to `com.ehapps.TextExtractor`.
 
 ## Troubleshooting
 
