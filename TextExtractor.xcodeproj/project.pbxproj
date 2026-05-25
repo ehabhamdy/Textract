@@ -17,7 +17,7 @@
 		4AD8D866E1C5E2ED987B074E /* TextExtractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AEEF4457684E2D71EB51FE /* TextExtractionEngine.swift */; };
 		4E88FC07C8EE2481ACBE6501 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0BF87FF16C2B791DE281E48 /* Assets.xcassets */; };
 		7E1F74FAAC42FB6E8C0BA785 /* LaunchAtLoginController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A849BE9B48E7AB4C2DB406A1 /* LaunchAtLoginController.swift */; };
-		912CF9C238D1617C220F034E /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCCA6739680048E281EBEC5A /* StatusItemController.swift */; };
+		A46FB96A8E7F2E995DC58217 /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11293ED91E77D26FEC7D4796 /* MenuBarContentView.swift */; };
 		BE099FE66950D6E0DB09A29B /* TextExtractorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09624E94DE71FD76F5FA1050 /* TextExtractorApp.swift */; };
 		C31A196884AD02566BC66DC9 /* ScreenCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A3168DFB50B01C90B82E29 /* ScreenCaptureService.swift */; };
 		DFF1FDEA8ECA285A71BB9C30 /* TextPostProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D3D1BD7E1C6CE6DC5E2B191 /* TextPostProcessor.swift */; };
@@ -26,6 +26,7 @@
 
 /* Begin PBXFileReference section */
 		09624E94DE71FD76F5FA1050 /* TextExtractorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextExtractorApp.swift; sourceTree = "<group>"; };
+		11293ED91E77D26FEC7D4796 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
 		189EF52347EDC7ACD5FA9EA3 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		26EB67DA836241AA943CC73C /* VisionTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionTextExtractor.swift; sourceTree = "<group>"; };
 		303987FB377AB47529F14D97 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -41,7 +42,6 @@
 		C0BF87FF16C2B791DE281E48 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C42600986C7F7FF463824817 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		F4C03CEAC6AA42AB76C8E99C /* TextExtractor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TextExtractor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FCCA6739680048E281EBEC5A /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,7 +136,7 @@
 		AAA9968D016CB273C08C7BFF /* MenuBar */ = {
 			isa = PBXGroup;
 			children = (
-				FCCA6739680048E281EBEC5A /* StatusItemController.swift */,
+				11293ED91E77D26FEC7D4796 /* MenuBarContentView.swift */,
 			);
 			path = MenuBar;
 			sourceTree = "<group>";
@@ -240,9 +240,9 @@
 				48981306C484EAAEAFBFCE62 /* AppShortcuts.swift in Sources */,
 				E43806F64BB8331417133C3B /* ClipboardService.swift in Sources */,
 				7E1F74FAAC42FB6E8C0BA785 /* LaunchAtLoginController.swift in Sources */,
+				A46FB96A8E7F2E995DC58217 /* MenuBarContentView.swift in Sources */,
 				C31A196884AD02566BC66DC9 /* ScreenCaptureService.swift in Sources */,
 				42F2AEE5013A6B608DDDFF1C /* SettingsView.swift in Sources */,
-				912CF9C238D1617C220F034E /* StatusItemController.swift in Sources */,
 				4AD8D866E1C5E2ED987B074E /* TextExtractionEngine.swift in Sources */,
 				BE099FE66950D6E0DB09A29B /* TextExtractorApp.swift in Sources */,
 				DFF1FDEA8ECA285A71BB9C30 /* TextPostProcessor.swift in Sources */,
