@@ -10,6 +10,9 @@ struct TextPostProcessor {
 
     private let preserveLineBreaks: Bool
     private let lineThreshold: CGFloat = 0.025
+    private static let rightToLeftCharacterSet = CharacterSet(charactersIn:
+        "\u{0590}-\u{08FF}\u{FB1D}-\u{FDFF}\u{FE70}-\u{FEFF}"
+    )
 
     init(preserveLineBreaks: Bool) {
         self.preserveLineBreaks = preserveLineBreaks
@@ -55,7 +58,15 @@ struct TextPostProcessor {
         }
 
         let assembledLines = lines.map { line in
-            line.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
+            let isRightToLeftLine = isRightToLeft(line)
+
+            return line.sorted {
+                if isRightToLeftLine {
+                    return $0.boundingBox.maxX > $1.boundingBox.maxX
+                }
+
+                return $0.boundingBox.minX < $1.boundingBox.minX
+            }
                 .map(\.text)
                 .joined(separator: " ")
         }
@@ -70,5 +81,18 @@ struct TextPostProcessor {
     private func normalizeFragment(_ text: String) -> String {
         text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func isRightToLeft(_ line: [RecognizedFragment]) -> Bool {
+        let combinedText = line.map(\.text).joined()
+        guard !combinedText.isEmpty else {
+            return false
+        }
+
+        let scalarView = combinedText.unicodeScalars
+        let rtlCount = scalarView.filter { Self.rightToLeftCharacterSet.contains($0) }.count
+        let latinCount = scalarView.filter { CharacterSet.letters.contains($0) && !Self.rightToLeftCharacterSet.contains($0) }.count
+
+        return rtlCount > latinCount
     }
 }

@@ -28,6 +28,7 @@ struct VisionTextExtractor: TextExtractionEngine {
             }
 
             request.recognitionLevel = .accurate
+            request.automaticallyDetectsLanguage = true
             request.usesLanguageCorrection = true
             request.recognitionLanguages = recognitionLanguages
             request.customWords = customWords

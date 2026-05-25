@@ -12,7 +12,7 @@ enum AppPreferences {
         UserDefaults.standard.register(defaults: [
             PreferenceKeys.playSuccessSound: true,
             PreferenceKeys.preserveLineBreaks: true,
-            PreferenceKeys.recognitionLanguages: "en-US",
+            PreferenceKeys.recognitionLanguages: "en-US, ar",
             PreferenceKeys.customWords: ""
         ])
     }
@@ -26,7 +26,7 @@ enum AppPreferences {
     }
 
     static var recognitionLanguages: [String] {
-        stringList(forKey: PreferenceKeys.recognitionLanguages, defaultValue: ["en-US"])
+        stringList(forKey: PreferenceKeys.recognitionLanguages, defaultValue: ["en-US", "ar"])
     }
 
     static var customWords: [String] {

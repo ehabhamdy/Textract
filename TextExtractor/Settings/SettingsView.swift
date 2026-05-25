@@ -21,7 +21,7 @@ struct SettingsView: View {
             Section("OCR") {
                 TextField("Recognition languages", text: $recognitionLanguages)
 
-                Text("Comma-separated BCP 47 language codes, for example: en-US, de-DE.")
+                Text("Comma-separated BCP 47 language codes, for example: en-US, ar, de-DE. Arabic works best when `ar` is included.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

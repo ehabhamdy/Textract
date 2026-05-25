@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MenuBarContentView: View {
+    @Environment(\.openSettings) private var openSettings
     @ObservedObject var appController: AppController
 
     var body: some View {
@@ -9,8 +10,8 @@ struct MenuBarContentView: View {
         }
         .disabled(appController.isProcessing)
 
-        SettingsLink {
-            Text("Settings...")
+        Button("Settings...") {
+            openSettings()
         }
 
         Divider()
