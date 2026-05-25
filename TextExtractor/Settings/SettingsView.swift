@@ -2,6 +2,7 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
+    @AppStorage(PreferenceKeys.ocrMode) private var ocrMode = OCRMode.automatic.rawValue
     @AppStorage(PreferenceKeys.playSuccessSound) private var playSuccessSound = true
     @AppStorage(PreferenceKeys.preserveLineBreaks) private var preserveLineBreaks = true
     @AppStorage(PreferenceKeys.recognitionLanguages) private var recognitionLanguages = "en-US, ar"
@@ -19,6 +20,17 @@ struct SettingsView: View {
             }
 
             Section("OCR") {
+                Picker("OCR mode", selection: $ocrMode) {
+                    ForEach(OCRMode.allCases, id: \.self) { mode in
+                        Text(mode.title)
+                            .tag(mode.rawValue)
+                    }
+                }
+
+                Text(selectedOCRMode.settingsDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 TextField("Recognition languages", text: $recognitionLanguages)
 
                 Text("Comma-separated BCP 47 language codes, for example: en-US, ar, de-DE. Arabic works best when `ar` is included.")
@@ -59,5 +71,9 @@ struct SettingsView: View {
             get: { launchAtLoginController.isEnabled },
             set: { launchAtLoginController.update(isEnabled: $0) }
         )
+    }
+
+    private var selectedOCRMode: OCRMode {
+        OCRMode(rawValue: ocrMode) ?? .automatic
     }
 }

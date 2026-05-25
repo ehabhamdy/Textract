@@ -4,12 +4,14 @@ import Vision
 
 struct VisionTextExtractor: TextExtractionEngine {
     func extractText(from imageURL: URL) async throws -> String {
+        let mode = AppPreferences.ocrMode
         let preserveLineBreaks = AppPreferences.preserveLineBreaks
         let recognitionLanguages = AppPreferences.recognitionLanguages
         let customWords = AppPreferences.customWords
 
         let extractedText = try await Task.detached(priority: .userInitiated) {
             let configuration = OCRConfiguration(
+                mode: mode,
                 preserveLineBreaks: preserveLineBreaks,
                 recognitionLanguages: recognitionLanguages,
                 customWords: customWords
@@ -20,33 +22,64 @@ struct VisionTextExtractor: TextExtractionEngine {
                 throw TextExtractionError.imageLoadFailed
             }
 
-            let imageData = try Data(contentsOf: imageURL)
-
-            var genericText: String?
-            var genericError: Error?
-
-            do {
-                genericText = try performGenericTextRecognition(on: image, configuration: configuration)
-            } catch {
-                genericError = error
+            let genericResult = Result<String, Error> {
+                try performGenericTextRecognition(on: image, configuration: configuration)
             }
 
-            if #available(macOS 26.0, *) {
-                let structuredExtractor = StructuredDocumentExtractor(configuration: configuration)
-                if let preferredText = try await structuredExtractor.extractPreferredText(from: imageData, fallbackText: genericText) {
-                    return preferredText
+            let genericText = try? genericResult.get()
+
+            switch configuration.mode {
+            case .generic:
+                return try genericResult.get()
+            case .automatic:
+                let imageData = try? Data(contentsOf: imageURL)
+
+                guard let imageData else {
+                    return try genericResult.get()
                 }
-            }
 
-            if let genericText {
-                return genericText
-            }
+                if #available(macOS 26.0, *) {
+                    let structuredExtractor = StructuredDocumentExtractor(configuration: configuration)
 
-            if let genericError {
-                throw genericError
-            }
+                    do {
+                        if let preferredText = try await structuredExtractor.extractPreferredText(from: imageData, fallbackText: genericText) {
+                            return preferredText
+                        }
+                    } catch {
+                        if let genericText {
+                            return genericText
+                        }
 
-            throw TextExtractionError.noTextFound
+                        throw error
+                    }
+                }
+
+                return try genericResult.get()
+            case .structured:
+                let imageData = try? Data(contentsOf: imageURL)
+
+                guard let imageData else {
+                    return try genericResult.get()
+                }
+
+                if #available(macOS 26.0, *) {
+                    let structuredExtractor = StructuredDocumentExtractor(configuration: configuration)
+
+                    do {
+                        if let structuredText = try await structuredExtractor.extractStructuredText(from: imageData) {
+                            return structuredText
+                        }
+                    } catch {
+                        if let genericText {
+                            return genericText
+                        }
+
+                        throw error
+                    }
+                }
+
+                return try genericResult.get()
+            }
         }.value
 
         let normalizedOutput = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -93,6 +126,7 @@ struct VisionTextExtractor: TextExtractionEngine {
 }
 
 struct OCRConfiguration: Sendable {
+    let mode: OCRMode
     let preserveLineBreaks: Bool
     let recognitionLanguages: [String]
     let customWords: [String]

@@ -15,6 +15,10 @@ struct StructuredDocumentExtractor: Sendable {
         self.configuration = configuration
     }
 
+    func extractStructuredText(from imageData: Data) async throws -> String? {
+        try await extractStructuredOutput(from: imageData)?.text
+    }
+
     func extractPreferredText(from imageData: Data, fallbackText: String?) async throws -> String? {
         guard let structuredOutput = try await extractStructuredOutput(from: imageData) else {
             return fallbackText
