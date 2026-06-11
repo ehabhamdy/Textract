@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TextExtractor — Instant OCR for macOS</title>
+  <meta name="description" content="Press a shortcut. Draw a box. Text is on your clipboard. Native macOS app powered by Apple Vision OCR. No cloud, no subscriptions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================
+       VARIABLES & RESET
+    ========================================== */
+    :root {
+      --void: #07070B;
+      --surface: #0D0D18;
+      --surface-2: #121220;
+      --amber: #FF6B35;
+      --lime: #C5F542;
+      --text: #E8E4DC;
+      --muted: #52525E;
+      --border: #181828;
+      --border-hi: #22223A;
+      --font-d: 'Bebas Neue', sans-serif;
+      --font-m: 'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--void);
+      color: var(--text);
+      font-family: var(--font-m);
+      font-weight: 300;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* Noise texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.025;
+      z-index: 9998;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+    }
+
+    /* ==========================================
+       NAVIGATION
+    ========================================== */
+    #nav {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 999;
+      height: 60px;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.4s, border-color 0.4s;
+      border-bottom: 1px solid transparent;
+    }
+
+    #nav.scrolled {
+      background: rgba(7,7,11,0.88);
+      backdrop-filter: blur(24px) saturate(1.4);
+      border-color: var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--font-d);
+      font-size: 22px;
+      letter-spacing: 0.05em;
+    }
+    .nav-logo .accent { color: var(--amber); }
+
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--amber);
+      color: #000;
+      font-family: var(--font-m);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 9px 22px;
+      transition: all 0.25s;
+      border: none;
+      cursor: pointer;
+    }
+    .nav-cta:hover { background: var(--lime); transform: translateY(-1px); }
+
+    /* ==========================================
+       HERO
+    ========================================== */
+    .hero {
+      min-height: 100svh;
+      padding: 112px 48px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 15%;
+      right: 5%;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle at center, rgba(255,107,53,0.09) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      bottom: -10%;
+      left: -5%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle at center, rgba(197,245,66,0.04) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 22px;
+    }
+    .hero-eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--amber); }
+
+    h1.hero-h1 {
+      font-family: var(--font-d);
+      font-size: clamp(72px, 8.5vw, 144px);
+      line-height: 0.87;
+      letter-spacing: 0.02em;
+      margin-bottom: 30px;
+    }
+    h1.hero-h1 .amber { color: var(--amber); }
+
+    .hero-desc {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 460px;
+      margin-bottom: 44px;
+    }
+    .hero-desc strong { color: var(--text); font-weight: 400; }
+
+    .hero-btns {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--amber);
+      color: #000;
+      font-family: var(--font-m);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      padding: 14px 32px;
+      transition: all 0.25s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background: var(--lime);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 48px rgba(197,245,66,0.22);
+    }
+
+    .btn-text {
+      font-size: 13px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .btn-text:hover { color: var(--text); }
+    .btn-text .arr { transition: transform 0.2s; }
+    .btn-text:hover .arr { transform: translateX(4px); }
+
+    /* ==========================================
+       HERO VISUAL
+    ========================================== */
+    .hero-visual { position: relative; z-index: 2; }
+
+    /* macOS menu bar pill */
+    .fake-menubar {
+      position: absolute;
+      top: -44px;
+      right: 0;
+      left: 32px;
+      height: 26px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-hi);
+      border-radius: 6px 6px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 14px;
+      gap: 18px;
+    }
+
+    .mb-item {
+      font-size: 11px;
+      color: rgba(255,255,255,0.28);
+      font-family: var(--font-m);
+    }
+    .mb-item.active { color: var(--amber); position: relative; cursor: default; }
+
+    .mb-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      background: rgba(22, 22, 36, 0.98);
+      border: 1px solid var(--border-hi);
+      border-radius: 8px;
+      padding: 4px;
+      min-width: 200px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+      animation: dropIn 0.22s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .mb-dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 14px;
+      border-radius: 5px;
+      font-size: 12px;
+      color: var(--text);
+      gap: 32px;
+    }
+    .mb-dropdown-item.hi { background: var(--amber); color: #000; }
+    .mb-dropdown-item .sc {
+      font-size: 10px;
+      opacity: 0.55;
+      letter-spacing: 0.04em;
+    }
+    .mb-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 3px 8px;
+    }
+
+    /* App window */
+    .app-window {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 40px 80px rgba(0,0,0,0.7),
+        0 0 100px rgba(255,107,53,0.06);
+    }
+
+    .win-titlebar {
+      background: #0A0A16;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 7px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tl { width: 12px; height: 12px; border-radius: 50%; }
+    .tl-r { background: #FF5F57; }
+    .tl-y { background: #FEBC2E; }
+    .tl-g { background: #28C840; }
+    .win-title { margin: 0 auto; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+
+    .win-body {
+      padding: 22px;
+      min-height: 270px;
+      position: relative;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .doc-content { color: #777; user-select: none; pointer-events: none; }
+    .doc-h { color: #AAA; font-size: 13px; margin-bottom: 14px; font-weight: 400; }
+    .doc-h .tag {
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--amber);
+      border: 1px solid rgba(255,107,53,0.3);
+      padding: 1px 5px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .doc-row { margin-bottom: 6px; }
+    .doc-row .k { color: #555; }
+    .doc-row .v { color: #888; }
+    .doc-row .vg { color: #34D399; }
+    .doc-sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+    /* Scan box & beam on hero window */
+    #hero-box {
+      position: absolute;
+      border: 1.5px solid var(--amber);
+      background: rgba(255,107,53,0.08);
+      pointer-events: none;
+      z-index: 20;
+      display: none;
+    }
+    #hero-box::before,
+    #hero-box::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: var(--amber);
+      border-style: solid;
+    }
+    #hero-box::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+    #hero-box::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    #hero-beam {
+      position: absolute;
+      height: 2px;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent 0%, var(--lime) 30%, var(--lime) 70%, transparent 100%);
+      box-shadow: 0 0 10px var(--lime), 0 0 28px rgba(197,245,66,0.55);
+      z-index: 30;
+      display: none;
+    }
+
+    /* ==========================================
+       PROOF TICKER
+    ========================================== */
+    .proof-bar {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 0;
+      overflow: hidden;
+    }
+
+    .proof-track {
+      display: flex;
+      gap: 0;
+      animation: ticker 24s linear infinite;
+      white-space: nowrap;
+    }
+
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .proof-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 32px;
+      flex-shrink: 0;
+    }
+    .proof-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+    .proof-item span {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ==========================================
+       INTERACTIVE DEMO
+    ========================================== */
+    #demo {
+      padding: 120px 48px;
+      position: relative;
+    }
+
+    .sec-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 14px;
+    }
+    .sec-label::before { content: ''; width: 28px; height: 1px; background: var(--amber); }
+
+    .sec-title {
+      font-family: var(--font-d);
+      font-size: clamp(48px, 6vw, 88px);
+      line-height: 0.88;
+      letter-spacing: 0.02em;
+      margin-bottom: 16px;
+    }
+
+    .sec-sub {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 520px;
+      line-height: 1.8;
+      margin-bottom: 56px;
+    }
+
+    .demo-wrap {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* The draggable screenshot */
+    .demo-screen {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+    }
+    .demo-screen-tb {
+      background: #0A0A14;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 7px;
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-screen-content {
+      padding: 28px 32px;
+      font-size: 13px;
+      line-height: 1.85;
+      color: #7A7A8A;
+      min-height: 360px;
+      position: relative;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .demo-block { margin-bottom: 22px; }
+    .demo-block-h { color: #BBBBC8; font-size: 14px; margin-bottom: 10px; font-weight: 400; }
+    .demo-block-h .badge {
+      display: inline-block;
+      background: rgba(197,245,66,0.1);
+      color: var(--lime);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .demo-kv { display: flex; gap: 12px; margin-bottom: 4px; font-size: 12px; }
+    .demo-kv .dk { color: #4A4A5A; width: 120px; flex-shrink: 0; }
+    .demo-kv .dv { color: #888; }
+    .demo-kv .dv.g { color: #34D399; }
+    .demo-kv .dv.b { color: #60A5FA; }
+    .demo-sep { border: none; border-top: 1px solid #141422; margin: 18px 0; }
+    .demo-list { margin-left: 0; }
+    .demo-list li {
+      list-style: none;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #888;
+    }
+    .demo-list li::before { content: '—'; color: #333; flex-shrink: 0; }
+
+    /* Hint overlay */
+    .demo-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(7,7,11,0.8);
+      border: 1px solid var(--border-hi);
+      padding: 8px 16px;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .demo-hint::before {
+      content: '';
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--muted);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .demo-hint.hide { opacity: 0; }
+
+    /* Selection box */
+    #demo-sel {
+      position: absolute;
+      border: 1.5px solid var(--amber);
+      background: rgba(255,107,53,0.09);
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+    }
+    #demo-sel::before, #demo-sel::after {
+      content: '';
+      position: absolute;
+      width: 7px; height: 7px;
+      border-color: var(--amber);
+      border-style: solid;
+    }
+    #demo-sel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+    #demo-sel::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    #demo-beam {
+      position: absolute;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--lime) 40%, var(--lime) 60%, transparent);
+      box-shadow: 0 0 10px var(--lime), 0 0 24px rgba(197,245,66,0.5);
+      pointer-events: none;
+      z-index: 20;
+      display: none;
+    }
+
+    /* Clipboard panel */
+    .clipboard-panel {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      height: fit-content;
+    }
+
+    .cp-header {
+      background: #0A0A14;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cp-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .cp-label svg { opacity: 0.5; }
+
+    .cp-badge {
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      background: rgba(197,245,66,0.1);
+      color: var(--lime);
+      display: none;
+    }
+
+    .cp-body {
+      padding: 20px;
+      min-height: 180px;
+    }
+
+    .cp-placeholder {
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.4;
+      line-height: 1.7;
+      height: 100%;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .cp-result {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.75;
+      display: none;
+      white-space: pre-wrap;
+    }
+
+    .cp-cursor::after {
+      content: '|';
+      color: var(--amber);
+      animation: blink 0.65s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; } 50% { opacity: 0; }
+    }
+
+    .cp-copied {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--lime);
+      letter-spacing: 0.06em;
+    }
+    .cp-copied::before {
+      content: '✓';
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(197,245,66,0.12);
+      font-size: 10px;
+    }
+
+    .cp-retry {
+      display: none;
+      margin-top: 14px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+      font-family: var(--font-m);
+      padding: 0;
+    }
+    .cp-retry:hover { color: var(--amber); }
+
+    /* ==========================================
+       HOW IT WORKS
+    ========================================== */
+    #how {
+      padding: 120px 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 56px;
+    }
+
+    .step {
+      background: var(--surface);
+      padding: 44px 40px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+    .step:hover { background: var(--surface-2); }
+
+    .step-num {
+      font-family: var(--font-d);
+      font-size: 110px;
+      line-height: 1;
+      color: rgba(255,107,53,0.06);
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      letter-spacing: -0.02em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .step-icon {
+      width: 44px; height: 44px;
+      border: 1px solid var(--border-hi);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+      color: var(--amber);
+    }
+
+    .step h3 {
+      font-family: var(--font-d);
+      font-size: 30px;
+      letter-spacing: 0.03em;
+      margin-bottom: 12px;
+    }
+
+    .step p { font-size: 13px; color: var(--muted); line-height: 1.75; }
+
+    /* Keyboard shortcut keys */
+    .kbd-combo {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 14px;
+    }
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border-hi);
+      border-radius: 5px;
+      padding: 4px 8px;
+      font-size: 13px;
+      min-width: 28px;
+      height: 28px;
+      box-shadow: 0 2px 0 var(--border-hi);
+      color: var(--text);
+    }
+    .kbd-plus { color: var(--muted); font-size: 10px; }
+
+    /* Drag visual */
+    .drag-visual {
+      position: relative;
+      width: 100%;
+      height: 80px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+    .drag-area {
+      position: absolute;
+      border: 1.5px solid var(--amber);
+      background: rgba(255,107,53,0.08);
+      border-radius: 1px;
+      animation: dragPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes dragPulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.97); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Clipboard result visual */
+    .result-visual {
+      margin-top: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-hi);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: #8A8A9A;
+      line-height: 1.6;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-visual::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 24px;
+      background: linear-gradient(transparent, var(--surface-2));
+    }
+    .result-typed {
+      overflow: hidden;
+      animation: typeReveal 2s steps(60) infinite;
+      white-space: nowrap;
+      width: 0;
+    }
+    @keyframes typeReveal {
+      0%   { width: 0; }
+      60%  { width: 100%; }
+      100% { width: 100%; }
+    }
+
+    /* ==========================================
+       FEATURES MOSAIC
+    ========================================== */
+    #features {
+      padding: 120px 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .mosaic {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 2px;
+      margin-top: 56px;
+    }
+
+    .tile {
+      background: var(--surface);
+      padding: 38px;
+      overflow: hidden;
+      position: relative;
+      transition: background 0.3s;
+    }
+    .tile:hover { background: var(--surface-2); }
+
+    .t1 { grid-column: span 5; grid-row: span 2; }
+    .t2 { grid-column: span 4; }
+    .t3 { grid-column: span 3; }
+    .t4 { grid-column: span 4; }
+    .t5 { grid-column: span 3; }
+    .t6 { grid-column: span 7; }
+    .t7 { grid-column: span 5; }
+
+    .tile-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tile-eyebrow::before { content: '◆'; font-size: 6px; }
+
+    .tile h3 {
+      font-family: var(--font-d);
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      margin-bottom: 10px;
+      line-height: 1;
+    }
+    .t1 h3 { font-size: 36px; }
+
+    .tile p { font-size: 12px; color: var(--muted); line-height: 1.75; }
+
+    /* OCR Visual (tile 1) */
+    .ocr-visual {
+      position: absolute;
+      bottom: -24px;
+      right: -24px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .scan-rings {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+    }
+    .ring {
+      position: absolute;
+      border: 1px solid rgba(255,107,53,0.15);
+      border-radius: 50%;
+      animation: expandRing 3s ease-out infinite;
+    }
+    .ring:nth-child(1) { width: 60px; height: 60px; top: -30px; right: -30px; }
+    .ring:nth-child(2) { width: 100px; height: 100px; top: -50px; right: -50px; animation-delay: 0.8s; }
+    .ring:nth-child(3) { width: 140px; height: 140px; top: -70px; right: -70px; animation-delay: 1.6s; }
+
+    @keyframes expandRing {
+      0%   { opacity: 0.5; transform: scale(0.6); }
+      100% { opacity: 0; transform: scale(1); }
+    }
+
+    /* Language tags */
+    .lang-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 14px;
+    }
+    .lang-pill {
+      background: var(--border-hi);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .tile:hover .lang-pill:nth-child(odd) { background: rgba(255,107,53,0.12); color: var(--amber); }
+
+    /* Settings preview for custom vocab tile */
+    .vocab-preview {
+      margin-top: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-hi);
+      padding: 10px 12px;
+      font-size: 11px;
+      color: #888;
+    }
+    .vocab-preview input {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: var(--font-m);
+      font-size: 11px;
+      width: 100%;
+      outline: none;
+    }
+
+    /* Launch at login visual */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-hi);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .toggle {
+      width: 32px; height: 18px;
+      background: var(--amber);
+      border-radius: 9px;
+      position: relative;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #000;
+    }
+
+    /* Accuracy visual */
+    .accuracy-bar {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .acc-row { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+    .acc-row .acc-label { width: 56px; color: var(--muted); flex-shrink: 0; }
+    .acc-track {
+      flex: 1;
+      height: 3px;
+      background: var(--border-hi);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .acc-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--amber), var(--lime));
+      border-radius: 2px;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    .tile:hover .acc-fill { transform: scaleX(1); }
+
+    /* ==========================================
+       PRIVACY SECTION
+    ========================================== */
+    #privacy {
+      padding: 120px 48px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    #privacy .sec-title { margin-bottom: 0; }
+
+    .privacy-copy p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.85;
+      margin-bottom: 14px;
+    }
+    .privacy-copy strong { color: var(--text); font-weight: 400; }
+
+    .privacy-points {
+      list-style: none;
+      margin-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+    .privacy-points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .privacy-points li .pli {
+      flex-shrink: 0;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(197,245,66,0.1);
+      color: var(--lime);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      margin-top: 1px;
+    }
+
+    /* Privacy Diagram */
+    .privacy-diagram {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 360px;
+    }
+
+    .pd-mac {
+      width: 120px; height: 120px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-hi);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      z-index: 4;
+      position: relative;
+    }
+    .pd-mac svg { color: var(--amber); }
+    .pd-mac-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+    .pd-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      animation: ringBreath 4s ease-in-out infinite;
+    }
+    .pd-ring:nth-child(1) { width: 180px; height: 180px; animation-delay: 0s; }
+    .pd-ring:nth-child(2) { width: 260px; height: 260px; animation-delay: 0.8s; }
+    .pd-ring:nth-child(3) { width: 340px; height: 340px; animation-delay: 1.6s; }
+
+    @keyframes ringBreath {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 0.7; }
+    }
+
+    .pd-orbit-label {
+      position: absolute;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--amber);
+      background: var(--void);
+      border: 1px solid rgba(255,107,53,0.25);
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .pd-cloud {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+    .pd-cloud svg { opacity: 0.4; }
+
+    .pd-strikethrough {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px; height: 40px;
+      color: rgba(255,80,80,0.4);
+      font-size: 28px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* ==========================================
+       CTA SECTION
+    ========================================== */
+    #download {
+      padding: 140px 48px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(255,107,53,0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .cta-overline {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .cta-title {
+      font-family: var(--font-d);
+      font-size: clamp(72px, 10vw, 160px);
+      line-height: 0.85;
+      letter-spacing: 0.02em;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .cta-sub {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 52px;
+      position: relative;
+    }
+
+    .cta-btn-wrap {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .cta-note {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      opacity: 0.7;
+    }
+    .cta-note strong { color: var(--amber); font-weight: 400; }
+
+    /* Requirements pills */
+    .req-pills {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .req-pill {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      padding: 5px 12px;
+    }
+
+    /* ==========================================
+       FOOTER
+    ========================================== */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      font-family: var(--font-d);
+      font-size: 18px;
+      letter-spacing: 0.04em;
+    }
+    .footer-logo .accent { color: var(--amber); }
+
+    .footer-text { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
+
+    /* ==========================================
+       SCROLL ANIMATIONS
+    ========================================== */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+    .fade-up.d1 { transition-delay: 0.1s; }
+    .fade-up.d2 { transition-delay: 0.2s; }
+    .fade-up.d3 { transition-delay: 0.3s; }
+
+    /* ==========================================
+       RESPONSIVE
+    ========================================== */
+    @media (max-width: 1024px) {
+      #nav { padding: 0 24px; }
+      .nav-links { display: none; }
+
+      .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; }
+      .hero-visual { display: none; }
+
+      #demo { padding: 80px 24px; }
+      .demo-wrap { grid-template-columns: 1fr; }
+
+      #how { padding: 80px 24px; }
+      .steps { grid-template-columns: 1fr; }
+
+      #features { padding: 80px 24px; }
+      .mosaic { grid-template-columns: 1fr; }
+      .tile, .t1, .t2, .t3, .t4, .t5, .t6, .t7 {
+        grid-column: span 1;
+        grid-row: span 1;
+      }
+
+      #privacy { grid-template-columns: 1fr; padding: 80px 24px; }
+      .privacy-diagram { display: none; }
+
+      #download { padding: 80px 24px; }
+      footer { padding: 24px; flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== NAV ==================== -->
+  <nav id="nav">
+    <a href="#" class="nav-logo"><span class="accent">T/</span>extractor</a>
+    <ul class="nav-links">
+      <li><a href="#demo">Demo</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+    </ul>
+    <a href="#download" class="nav-cta">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <path d="M6 1v7.586L8.293 6.293l1.414 1.414L6 11.121 2.293 7.707 3.707 6.293 6 8.586V1h0z"/>
+        <path d="M1 11h10v1H1z"/>
+      </svg>
+      Download
+    </a>
+  </nav>
+
+  <!-- ==================== HERO ==================== -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-glow-2"></div>
+
+    <div class="hero-content">
+      <div class="hero-eyebrow">macOS Menu Bar App</div>
+      <h1 class="hero-h1">
+        CAPTURE<br>
+        <span class="amber">ANY TEXT</span><br>
+        ON SCREEN
+      </h1>
+      <p class="hero-desc">
+        Press a shortcut. Draw a box. <strong>Text is on your clipboard.</strong>
+        Runs silently in your menu bar, powered by Apple's on-device Vision — no internet, no subscriptions, no nonsense.
+      </p>
+      <div class="hero-btns">
+        <a href="#download" class="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+            <path d="M7 1v9.586l2.793-2.793 1.414 1.414L7 13.414 2.793 9.207l1.414-1.414L7 10.586V1z"/>
+            <path d="M1 13h12v1H1z"/>
+          </svg>
+          Download Free
+        </a>
+        <a href="#demo" class="btn-text">
+          Try the demo <span class="arr">→</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="fake-menubar">
+        <span class="mb-item">3:41 PM</span>
+        <span class="mb-item">wifi</span>
+        <span class="mb-item active" id="mb-trigger">
+          T/
+          <div class="mb-dropdown">
+            <div class="mb-dropdown-item hi">Capture Text <span class="sc">⌥⌘2</span></div>
+            <div class="mb-dropdown-item">Settings… <span class="sc">⌘,</span></div>
+            <div class="mb-divider"></div>
+            <div class="mb-dropdown-item">Quit TextExtractor</div>
+          </div>
+        </span>
+      </div>
+
+      <div class="app-window">
+        <div class="win-titlebar">
+          <div class="tl tl-r"></div>
+          <div class="tl tl-y"></div>
+          <div class="tl tl-g"></div>
+          <span class="win-title">revenue_q3.pdf — Preview</span>
+        </div>
+        <div class="win-body">
+          <div id="hero-box"></div>
+          <div id="hero-beam"></div>
+
+          <div class="doc-content">
+            <div class="doc-h">
+              <span class="tag">PDF</span>
+              Q3 2024 Revenue Summary
+            </div>
+            <div class="doc-row"><span class="k">Total Revenue:</span> <span class="v">$4,287,340</span></div>
+            <div class="doc-row"><span class="k">YoY Growth:</span> <span class="vg">+23.4%</span></div>
+            <div class="doc-row"><span class="k">Active Customers:</span> <span class="v">14,892</span></div>
+            <div class="doc-row"><span class="k">New Markets:</span> <span class="v">APAC expansion phase 2</span></div>
+            <hr class="doc-sep">
+            <div class="doc-row"><span class="k">Enterprise tier:</span> <span class="v">$2.1M</span></div>
+            <div class="doc-row"><span class="k">Professional tier:</span> <span class="v">$1.4M</span></div>
+            <div class="doc-row"><span class="k">Starter tier:</span> <span class="v">$787K</span></div>
+            <hr class="doc-sep">
+            <div style="font-size: 11px; color: #444; line-height: 1.7;">
+              Forecast Q4 2024: $5.2M–5.8M. Key risks include enterprise deal slippage (3 large contracts pending) and competitive pressure in mid-market segment.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PROOF TICKER ==================== -->
+  <div class="proof-bar">
+    <div class="proof-track">
+      <div class="proof-item"><span class="proof-dot"></span><span>Apple Vision OCR</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>100% On-Device</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>50+ Languages</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>macOS 14+ Native</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Zero Cloud</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Global Shortcut</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Instant Capture</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Launch at Login</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Arabic + RTL</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>No Subscription</span></div>
+      <!-- duplicate for seamless loop -->
+      <div class="proof-item"><span class="proof-dot"></span><span>Apple Vision OCR</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>100% On-Device</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>50+ Languages</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>macOS 14+ Native</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Zero Cloud</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Global Shortcut</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Instant Capture</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Launch at Login</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>Arabic + RTL</span></div>
+      <div class="proof-item"><span class="proof-dot"></span><span>No Subscription</span></div>
+    </div>
+  </div>
+
+  <!-- ==================== INTERACTIVE DEMO ==================== -->
+  <section id="demo">
+    <div class="sec-label">Try it</div>
+    <div class="sec-title">SEE IT IN<br>ACTION</div>
+    <p class="sec-sub">Click and drag to select any region below — exactly like you would in the real app. Watch TextExtractor scan and extract the text.</p>
+
+    <div class="demo-wrap">
+      <!-- The "screenshot" to interact with -->
+      <div class="demo-screen">
+        <div class="demo-screen-tb">
+          <div class="tl tl-r"></div>
+          <div class="tl tl-y"></div>
+          <div class="tl tl-g"></div>
+          <span class="win-title">Apple Developer Documentation — Vision</span>
+        </div>
+        <div class="demo-screen-content" id="demo-area">
+          <div id="demo-sel"></div>
+          <div id="demo-beam"></div>
+
+          <div class="demo-block">
+            <div class="demo-block-h">VNRecognizeTextRequest <span class="badge">Vision Framework</span></div>
+            <div class="demo-kv"><span class="dk">Class:</span><span class="dv b">VNImageBasedRequest</span></div>
+            <div class="demo-kv"><span class="dk">Platform:</span><span class="dv">macOS 10.15+</span></div>
+            <div class="demo-kv"><span class="dk">Framework:</span><span class="dv">Vision.framework</span></div>
+          </div>
+
+          <hr class="demo-sep">
+
+          <div class="demo-block">
+            <div class="demo-block-h">Recognition Quality</div>
+            <div class="demo-kv"><span class="dk">.accurate</span><span class="dv g">High quality — processes full image detail</span></div>
+            <div class="demo-kv"><span class="dk">.fast</span><span class="dv">Lower quality — optimized for speed</span></div>
+          </div>
+
+          <hr class="demo-sep">
+
+          <div class="demo-block">
+            <div class="demo-block-h">Supported Languages</div>
+            <ul class="demo-list">
+              <li>English (en-US, en-GB, en-AU)</li>
+              <li>Arabic (ar) — full RTL support</li>
+              <li>Chinese Simplified &amp; Traditional</li>
+              <li>German, French, Italian, Spanish</li>
+              <li>Japanese, Korean, Portuguese, Russian</li>
+            </ul>
+          </div>
+
+          <hr class="demo-sep">
+
+          <div class="demo-block">
+            <div class="demo-block-h">Configuration</div>
+            <div class="demo-kv"><span class="dk">recognitionLevel</span><span class="dv">.accurate</span></div>
+            <div class="demo-kv"><span class="dk">usesLanguageCorrection</span><span class="dv g">true</span></div>
+            <div class="demo-kv"><span class="dk">customWords</span><span class="dv">["NSPasteboard", "UIElement"]</span></div>
+          </div>
+
+          <div class="demo-hint" id="demo-hint">Click and drag to extract</div>
+        </div>
+      </div>
+
+      <!-- Clipboard result -->
+      <div class="clipboard-panel">
+        <div class="cp-header">
+          <div class="cp-label">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" opacity="0.6">
+              <rect x="3" y="1" width="6" height="1" rx="0.5"/>
+              <rect x="2" y="1" width="8" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="3.5" y="4" width="5" height="0.75" rx="0.3"/>
+              <rect x="3.5" y="5.75" width="4" height="0.75" rx="0.3"/>
+              <rect x="3.5" y="7.5" width="3" height="0.75" rx="0.3"/>
+            </svg>
+            Clipboard Output
+          </div>
+          <div class="cp-badge" id="cp-badge">✓ Extracted</div>
+        </div>
+        <div class="cp-body">
+          <div class="cp-placeholder" id="cp-placeholder">
+            Select a region to extract text…
+          </div>
+          <div class="cp-result" id="cp-result"></div>
+          <div class="cp-copied" id="cp-copied">Copied to clipboard</div>
+          <button class="cp-retry" id="cp-retry" onclick="resetDemo()">↺ Try again</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== HOW IT WORKS ==================== -->
+  <section id="how">
+    <div class="sec-label fade-up">Process</div>
+    <div class="sec-title fade-up d1">HOW IT<br>WORKS</div>
+
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="16" height="12" rx="2"/>
+            <path d="M7 16h6M10 15v1"/>
+            <path d="M6 9h1M9 9h5"/>
+          </svg>
+        </div>
+        <h3>PRESS THE SHORTCUT</h3>
+        <p>From any app — browser, Figma, Slack, Terminal — your configured keyboard shortcut triggers TextExtractor instantly.</p>
+        <div class="kbd-combo">
+          <span class="kbd">⌥</span>
+          <span class="kbd-plus">+</span>
+          <span class="kbd">⌘</span>
+          <span class="kbd-plus">+</span>
+          <span class="kbd">2</span>
+        </div>
+      </div>
+
+      <div class="step fade-up d1">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="14" height="14" rx="1" stroke-dasharray="3 2"/>
+            <path d="M3 3 l4 0 0-0M17 3 l-4 0M3 17 l4 0M17 17 l-4 0"/>
+          </svg>
+        </div>
+        <h3>DRAW YOUR REGION</h3>
+        <p>The native macOS selection cursor appears. Click and drag over any text — on any app, PDF, image, or video frame.</p>
+        <div class="drag-visual">
+          <div class="drag-area" style="top:12px; left:8px; width:160px; height:52px;"></div>
+        </div>
+      </div>
+
+      <div class="step fade-up d2">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="5" y="2" width="10" height="14" rx="1.5"/>
+            <rect x="7" y="1" width="6" height="2" rx="1"/>
+            <path d="M7.5 8h5M7.5 11h3.5"/>
+          </svg>
+        </div>
+        <h3>TEXT IS COPIED</h3>
+        <p>Apple Vision processes the image locally in milliseconds. The recognized text lands on your clipboard, ready to paste.</p>
+        <div class="result-visual">
+          <div class="result-typed">Total Revenue: $4,287,340 · YoY Growth: +23.4%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FEATURES MOSAIC ==================== -->
+  <section id="features">
+    <div class="sec-label fade-up">Capabilities</div>
+    <div class="sec-title fade-up d1">BUILT FOR<br>POWER USERS</div>
+
+    <div class="mosaic">
+      <!-- Tile 1: On-device OCR (large, double row) -->
+      <div class="tile t1 fade-up">
+        <div class="scan-rings">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+        </div>
+        <div class="tile-eyebrow">Core Engine</div>
+        <h3>APPLE<br>VISION OCR</h3>
+        <p>TextExtractor runs entirely on your machine. Apple's Vision framework — the same engine behind Live Text in iOS — handles all recognition. No requests leave your device.</p>
+        <div class="accuracy-bar" style="margin-top:20px;">
+          <div class="acc-row">
+            <span class="acc-label">Accurate</span>
+            <div class="acc-track"><div class="acc-fill" style="width:96%"></div></div>
+          </div>
+          <div class="acc-row">
+            <span class="acc-label">Fast</span>
+            <div class="acc-track"><div class="acc-fill" style="width:82%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tile 2: Languages -->
+      <div class="tile t2 fade-up d1">
+        <div class="tile-eyebrow">Multilingual</div>
+        <h3>50+ LANGUAGES</h3>
+        <p>From Arabic to Korean. Full RTL support included.</p>
+        <div class="lang-grid">
+          <span class="lang-pill">EN-US</span>
+          <span class="lang-pill">AR</span>
+          <span class="lang-pill">ZH-HANS</span>
+          <span class="lang-pill">FR</span>
+          <span class="lang-pill">DE</span>
+          <span class="lang-pill">JA</span>
+          <span class="lang-pill">KO</span>
+          <span class="lang-pill">ES</span>
+          <span class="lang-pill">RU</span>
+          <span class="lang-pill">PT</span>
+          <span class="lang-pill">IT</span>
+          <span class="lang-pill">+39</span>
+        </div>
+      </div>
+
+      <!-- Tile 3: Shortcut -->
+      <div class="tile t3 fade-up d2">
+        <div class="tile-eyebrow">Global Shortcut</div>
+        <h3>YOUR KEYS,<br>YOUR RULES</h3>
+        <p>Assign any shortcut. Works from every app.</p>
+        <div class="kbd-combo" style="margin-top:14px;">
+          <span class="kbd" style="font-size:16px;">⌥</span>
+          <span class="kbd-plus">+</span>
+          <span class="kbd" style="font-size:16px;">⌘</span>
+          <span class="kbd-plus">+</span>
+          <span class="kbd">2</span>
+        </div>
+      </div>
+
+      <!-- Tile 4: Custom vocabulary -->
+      <div class="tile t4 fade-up">
+        <div class="tile-eyebrow">Precision</div>
+        <h3>CUSTOM WORDS</h3>
+        <p>Train the engine with product names, acronyms, or jargon for domain-specific accuracy.</p>
+        <div class="vocab-preview">
+          <div style="color:var(--muted); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px;">Custom vocabulary</div>
+          <input type="text" value="NSPasteboard, UIElement, VNRequest" readonly>
+        </div>
+      </div>
+
+      <!-- Tile 5: Launch at login -->
+      <div class="tile t5 fade-up d1">
+        <div class="tile-eyebrow">Lifecycle</div>
+        <h3>ALWAYS<br>READY</h3>
+        <p>Launch at login. Zero friction from day one.</p>
+        <div class="toggle-row">
+          Launch at login
+          <div class="toggle"></div>
+        </div>
+      </div>
+
+      <!-- Tile 6: Preserve formatting -->
+      <div class="tile t6 fade-up">
+        <div class="tile-eyebrow">Output Quality</div>
+        <h3>PRESERVES YOUR FORMATTING</h3>
+        <p>Line breaks, reading order, and paragraph structure are maintained exactly as they appear on screen. No mangled output, no extra cleanup — your text, faithfully reproduced and ready to paste.</p>
+      </div>
+
+      <!-- Tile 7: Privacy / no cloud -->
+      <div class="tile t7 fade-up d1">
+        <div class="tile-eyebrow">Privacy</div>
+        <h3>NO CLOUD.<br>EVER.</h3>
+        <p>Everything runs locally. Your screen contents are never transmitted, stored, or seen by anyone but you. macOS 14 native, zero telemetry.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PRIVACY ==================== -->
+  <section id="privacy">
+    <div>
+      <div class="sec-label fade-up">Security</div>
+      <div class="sec-title fade-up d1">YOUR SCREEN<br><span style="color:var(--amber)">STAYS</span><br>YOURS</div>
+      <div class="privacy-copy fade-up d2">
+        <p>TextExtractor was built with a deliberate design decision: <strong>no network requests, ever.</strong> There is no account, no API key, no telemetry. The app processes everything through Apple's on-device Vision framework and writes directly to NSPasteboard.</p>
+        <p>What that means in practice: a screenshot you take at 2am in a secure facility behaves identically to one taken at your desk. The data does not move.</p>
+        <ul class="privacy-points">
+          <li><span class="pli">✓</span>Apple Vision processes images in local memory — no disk caching of screenshots</li>
+          <li><span class="pli">✓</span>Screen Recording permission is scoped to the selected region only</li>
+          <li><span class="pli">✓</span>Temporary capture files are deleted immediately after OCR completes</li>
+          <li><span class="pli">✓</span>No analytics, no crash reporters, no external SDKs</li>
+          <li><span class="pli">✓</span>Open architecture — inspect it yourself</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="privacy-diagram fade-up d2">
+      <div class="pd-ring"></div>
+      <div class="pd-ring"></div>
+      <div class="pd-ring"></div>
+
+      <div class="pd-mac">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="4" y="6" width="28" height="18" rx="3"/>
+          <path d="M10 30h16M18 24v6"/>
+          <rect x="8" y="10" width="20" height="10" rx="1" fill="currentColor" opacity="0.15"/>
+        </svg>
+        <div class="pd-mac-label">Your Mac</div>
+      </div>
+
+      <div class="pd-orbit-label" style="top:22%; left:5%;">Vision OCR</div>
+      <div class="pd-orbit-label" style="bottom:22%; right:5%;">NSPasteboard</div>
+      <div class="pd-orbit-label" style="top:50%; right:0; transform:translateY(-50%);">On-Device</div>
+
+      <div class="pd-cloud">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>
+        <span style="font-size:9px; color:#333; letter-spacing:0.06em;">CLOUD</span>
+        <span style="font-size:14px; color:rgba(255,80,80,0.5); line-height:1;">✗</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== DOWNLOAD CTA ==================== -->
+  <section id="download">
+    <div class="cta-glow"></div>
+    <div class="cta-overline">Free. Native. Yours.</div>
+    <div class="cta-title fade-up">DOWNLOAD<br><span style="color:var(--amber)">FREE</span></div>
+    <p class="cta-sub fade-up d1">
+      One download. No account. No subscription.<br>
+      Text extraction the way it should be.
+    </p>
+    <div class="cta-btn-wrap fade-up d2">
+      <a href="#" class="btn-primary" style="padding: 16px 48px; font-size: 14px;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1v9.586l3.293-3.293 1.414 1.414L8 13.414 3.293 8.707l1.414-1.414L8 10.586V1z"/>
+          <path d="M1 14h14v1H1z"/>
+        </svg>
+        Download TextExtractor
+      </a>
+      <div class="cta-note">Free forever · <strong>macOS 14+</strong> · Developer ID signed</div>
+    </div>
+
+    <div class="req-pills fade-up d3">
+      <div class="req-pill">macOS 14 Sonoma+</div>
+      <div class="req-pill">Apple Silicon or Intel</div>
+      <div class="req-pill">Screen Recording Permission</div>
+      <div class="req-pill">~4 MB</div>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer>
+    <div class="footer-logo"><span class="accent">T/</span>extractor</div>
+    <div class="footer-text">Built for macOS · © 2024 · Open Source</div>
+  </footer>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    /* ---- Nav scroll ---- */
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    /* ---- Scroll reveal ---- */
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+
+    /* ---- Hero auto-scan animation ---- */
+    const heroBox  = document.getElementById('hero-box');
+    const heroBeam = document.getElementById('hero-beam');
+
+    function heroScan() {
+      // position over the financial rows
+      const x = 0, y = 72, w = 280, h = 88;
+      Object.assign(heroBox.style, {
+        display: 'block', left: x+'px', top: y+'px', width: w+'px', height: h+'px'
+      });
+
+      let raf, start = null;
+
+      function sweep(ts) {
+        if (!start) start = ts;
+        const prog = Math.min((ts - start) / 700, 1);
+        const beamY = y + prog * h;
+        Object.assign(heroBeam.style, {
+          display: 'block',
+          left: (x - 2)+'px',
+          width: (w + 4)+'px',
+          top: beamY+'px'
+        });
+        if (prog < 1) { raf = requestAnimationFrame(sweep); }
+        else {
+          heroBeam.style.display = 'none';
+          setTimeout(() => {
+            heroBox.style.display = 'none';
+            setTimeout(heroScan, 2800);
+          }, 250);
+        }
+      }
+
+      setTimeout(() => { raf = requestAnimationFrame(sweep); }, 700);
+    }
+
+    setTimeout(heroScan, 1400);
+
+    /* ---- Interactive Demo ---- */
+    const demoArea     = document.getElementById('demo-area');
+    const demoSel      = document.getElementById('demo-sel');
+    const demoBeam     = document.getElementById('demo-beam');
+    const demoHint     = document.getElementById('demo-hint');
+    const cpPlaceholder = document.getElementById('cp-placeholder');
+    const cpResult     = document.getElementById('cp-result');
+    const cpCopied     = document.getElementById('cp-copied');
+    const cpBadge      = document.getElementById('cp-badge');
+    const cpRetry      = document.getElementById('cp-retry');
+
+    let isDragging = false, startX = 0, startY = 0;
+    let demoActive = false;
+
+    // Text zones: map vertical position to extracted text
+    const zones = [
+      {
+        min: 0, max: 120,
+        text: "VNRecognizeTextRequest\nClass: VNImageBasedRequest\nPlatform: macOS 10.15+\nFramework: Vision.framework"
+      },
+      {
+        min: 120, max: 220,
+        text: "Recognition Quality\n.accurate — High quality, processes full image detail\n.fast — Lower quality, optimized for speed"
+      },
+      {
+        min: 220, max: 360,
+        text: "Supported Languages\n— English (en-US, en-GB, en-AU)\n— Arabic (ar) — full RTL support\n— Chinese Simplified & Traditional\n— German, French, Italian, Spanish\n— Japanese, Korean, Portuguese, Russian"
+      },
+      {
+        min: 360, max: 480,
+        text: "Configuration\nrecognitionLevel: .accurate\nusesLanguageCorrection: true\ncustomWords: [\"NSPasteboard\", \"UIElement\"]"
+      }
+    ];
+
+    function getZoneText(y) {
+      for (const z of zones) {
+        if (y >= z.min && y < z.max) return z.text;
+      }
+      return zones[zones.length - 1].text;
+    }
+
+    function relativePos(e) {
+      const rect = demoArea.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    demoArea.addEventListener('mousedown', e => {
+      if (demoActive) return;
+      isDragging = true;
+      const pos = relativePos(e);
+      startX = pos.x; startY = pos.y;
+      demoSel.style.display = 'block';
+      demoSel.style.left = startX + 'px';
+      demoSel.style.top  = startY + 'px';
+      demoSel.style.width  = '0px';
+      demoSel.style.height = '0px';
+      demoHint.classList.add('hide');
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const pos = relativePos(e);
+      const x = Math.min(pos.x, startX);
+      const y = Math.min(pos.y, startY);
+      const w = Math.abs(pos.x - startX);
+      const h = Math.abs(pos.y - startY);
+      Object.assign(demoSel.style, {
+        left: x+'px', top: y+'px', width: w+'px', height: h+'px'
+      });
+    });
+
+    document.addEventListener('mouseup', e => {
+      if (!isDragging) return;
+      isDragging = false;
+
+      const selW = parseInt(demoSel.style.width);
+      const selH = parseInt(demoSel.style.height);
+
+      if (selW < 20 || selH < 20) {
+        demoSel.style.display = 'none';
+        demoHint.classList.remove('hide');
+        return;
+      }
+
+      demoActive = true;
+      runScan();
+    });
+
+    function runScan() {
+      const top  = parseInt(demoSel.style.top);
+      const left = parseInt(demoSel.style.left);
+      const h    = parseInt(demoSel.style.height);
+      const w    = parseInt(demoSel.style.width);
+
+      // Animate scan beam
+      demoBeam.style.display = 'block';
+      demoBeam.style.left  = (left - 2) + 'px';
+      demoBeam.style.width = (w + 4) + 'px';
+      demoBeam.style.top   = top + 'px';
+
+      let start = null;
+      function sweep(ts) {
+        if (!start) start = ts;
+        const prog = Math.min((ts - start) / 640, 1);
+        demoBeam.style.top = (top + prog * h) + 'px';
+        if (prog < 1) { requestAnimationFrame(sweep); }
+        else {
+          demoBeam.style.display = 'none';
+          setTimeout(() => showResult(top), 160);
+        }
+      }
+      requestAnimationFrame(sweep);
+    }
+
+    async function showResult(topY) {
+      const text = getZoneText(topY);
+
+      cpPlaceholder.style.display = 'none';
+      cpResult.style.display = 'block';
+      cpResult.textContent = '';
+      cpResult.classList.add('cp-cursor');
+      cpBadge.style.display = 'block';
+
+      await typewriter(cpResult, text, 22);
+
+      cpResult.classList.remove('cp-cursor');
+      cpCopied.style.display = 'flex';
+      cpRetry.style.display  = 'block';
+    }
+
+    function typewriter(el, text, speed) {
+      return new Promise(resolve => {
+        let i = 0;
+        const tick = () => {
+          el.textContent += text[i++];
+          if (i < text.length) setTimeout(tick, speed);
+          else resolve();
+        };
+        tick();
+      });
+    }
+
+    function resetDemo() {
+      demoActive = false;
+      demoSel.style.display   = 'none';
+      demoBeam.style.display  = 'none';
+      cpResult.style.display  = 'none';
+      cpCopied.style.display  = 'none';
+      cpRetry.style.display   = 'none';
+      cpBadge.style.display   = 'none';
+      cpResult.textContent    = '';
+      cpPlaceholder.style.display = 'flex';
+      demoHint.classList.remove('hide');
+    }
+
+    /* ---- Touch support for demo ---- */
+    demoArea.addEventListener('touchstart', e => {
+      if (demoActive) return;
+      isDragging = true;
+      const pos = relativePos(e);
+      startX = pos.x; startY = pos.y;
+      demoSel.style.cssText = `display:block; left:${startX}px; top:${startY}px; width:0; height:0;`;
+      demoHint.classList.add('hide');
+    }, { passive: true });
+
+    demoArea.addEventListener('touchmove', e => {
+      if (!isDragging) return;
+      const pos = relativePos(e);
+      const x = Math.min(pos.x, startX);
+      const y = Math.min(pos.y, startY);
+      const w = Math.abs(pos.x - startX);
+      const h = Math.abs(pos.y - startY);
+      Object.assign(demoSel.style, { left:x+'px', top:y+'px', width:w+'px', height:h+'px' });
+    }, { passive: true });
+
+    demoArea.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      const selW = parseInt(demoSel.style.width);
+      const selH = parseInt(demoSel.style.height);
+      if (selW < 20 || selH < 20) {
+        demoSel.style.display = 'none';
+        demoHint.classList.remove('hide');
+        return;
+      }
+      demoActive = true;
+      runScan();
+    });
+  </script>
+</body>
+</html>
