@@ -15,6 +15,9 @@ struct TextExtractorApp: App {
         Settings {
             SettingsView()
                 .frame(width: 460)
+                .onAppear {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
         }
     }
 }

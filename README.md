@@ -52,7 +52,7 @@ open TextExtractor.xcodeproj
 3. Choose `My Mac` as the run destination.
 4. Press Run.
 
-The app runs as a menu-bar utility, so it will not appear in the Dock. Look for the menu-bar icon with the text viewfinder symbol.
+The app runs as a menu-bar utility, so it will not appear in the Dock or Command-Tab app switcher. Look for the menu-bar icon with the text viewfinder symbol. Opening Settings activates the app so the settings window appears in front of other apps.
 
 ## Screen Recording Permission
 

@@ -11,6 +11,7 @@ struct MenuBarContentView: View {
         .disabled(appController.isProcessing)
 
         Button("Settings...") {
+            NSApp.activate(ignoringOtherApps: true)
             openSettings()
         }
 
