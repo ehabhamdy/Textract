@@ -20,12 +20,15 @@ targets:
     platform: macOS
     sources:
       - TextExtractor
+    resources:
+      - TextExtractor/Resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: TextExtractor/Support/Info.plist
         CODE_SIGN_ENTITLEMENTS: TextExtractor/Support/TextExtractor.entitlements
         ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: TextExtractor
         SUPPORTS_MACCATALYST: NO
     dependencies:
